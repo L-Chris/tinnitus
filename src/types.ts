@@ -32,6 +32,12 @@ export const OCTAVE_MAX = 4
 export const octaveLabel = (v: number) =>
   OCTAVE_OPTIONS.find((o) => o.value === v)?.label ?? String(v)
 
+export const snapOctaves = (n: number) => {
+  const preset = OCTAVE_OPTIONS.find((o) => Math.abs(o.value - n) < 0.0002)
+  if (preset !== undefined) return preset.value
+  return Math.min(OCTAVE_MAX, Math.max(OCTAVE_MIN, Math.round(n * 10000) / 10000))
+}
+
 export interface Tone {
   id: number
   freq: number

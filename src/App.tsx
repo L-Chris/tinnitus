@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import ToneCard from './ToneCard'
 import type { Tone } from './types'
-import { OCTAVE_DEFAULT, OCTAVE_MAX, OCTAVE_MIN, WAVES } from './types'
+import { OCTAVE_DEFAULT, WAVES, snapOctaves } from './types'
 import { useToneEngine } from './useToneEngine'
 
 const STORAGE_KEY = 'tinnitus-settings'
@@ -53,9 +53,7 @@ const loadState = (): SavedState | null => {
         volume: Math.min(1, Math.max(0, t.volume)),
         pan: Math.min(1, Math.max(-1, t.pan)),
         mode: t.mode === 'noise' ? 'noise' : 'tone',
-        octaves: Number.isFinite(t.octaves)
-          ? Math.min(OCTAVE_MAX, Math.max(OCTAVE_MIN, Math.round(t.octaves * 10000) / 10000))
-          : OCTAVE_DEFAULT,
+        octaves: Number.isFinite(t.octaves) ? snapOctaves(t.octaves) : OCTAVE_DEFAULT,
         playing: false,
       })),
       master: Number.isFinite(data.master)

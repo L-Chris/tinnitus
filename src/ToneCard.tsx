@@ -10,6 +10,7 @@ import {
   WAVES,
   WAVE_LABELS,
   octaveLabel,
+  snapOctaves,
 } from './types'
 
 const F_MIN = 20
@@ -17,14 +18,9 @@ const F_MAX = 20000
 const LOG_RANGE = Math.log(F_MAX / F_MIN)
 
 const clampFreq = (f: number) => Math.min(F_MAX, Math.max(F_MIN, Math.round(f)))
+const snapFreq10 = (f: number) => clampFreq(Math.round(f / 10) * 10)
 const toSlider = (f: number) => Math.round((1000 * Math.log(f / F_MIN)) / LOG_RANGE)
 const fromSlider = (v: number) => F_MIN * Math.exp((LOG_RANGE * v) / 1000)
-const clampOctaves = (n: number) =>
-  Math.min(OCTAVE_MAX, Math.max(OCTAVE_MIN, Math.round(n * 10000) / 10000))
-const snapOctaves = (n: number) => {
-  const preset = OCTAVE_OPTIONS.find((o) => Math.abs(o.value - n) < 0.0002)
-  return preset ? preset.value : clampOctaves(n)
-}
 const fmtOct = (v: number) => String(Math.round(v * 10000) / 10000)
 const formatHz = (hz: number) =>
   hz >= 1000 ? `${(hz / 1000).toFixed(1)} kHz` : `${Math.round(hz)} Hz`
@@ -141,7 +137,7 @@ export default function ToneCard({ tone, onChange, onRemove }: ToneCardProps) {
           min={0}
           max={1000}
           value={toSlider(tone.freq)}
-          onChange={(e) => onChange({ freq: clampFreq(fromSlider(Number(e.target.value))) })}
+          onChange={(e) => onChange({ freq: snapFreq10(fromSlider(Number(e.target.value))) })}
           className="w-full"
           aria-label="频率"
         />
