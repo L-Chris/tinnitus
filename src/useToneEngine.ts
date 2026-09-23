@@ -23,7 +23,7 @@ type Voice = ToneVoice | NoiseVoice
 
 interface Engine {
   ctx: AudioContext | null
-  master: GainNode | null
+  limiter: DynamicsCompressorNode | null
   noiseBuffer: AudioBuffer | null
   voices: Map<number, Voice>
 }
@@ -36,7 +36,7 @@ const releaseVoice = (voice: Voice, ctx: AudioContext) => {
 
 const createVoice = (
   ctx: AudioContext,
-  master: GainNode,
+  out: AudioNode,
   noiseBuffer: AudioBuffer,
   tone: Tone,
 ): Voice => {
@@ -44,7 +44,7 @@ const createVoice = (
   const panner = ctx.createStereoPanner()
   panner.pan.value = tone.pan
   gain.connect(panner)
-  panner.connect(master)
+  panner.connect(out)
   const t = ctx.currentTime
   gain.gain.setValueAtTime(0, t)
   gain.gain.linearRampToValueAtTime(tone.volume, t + 0.03)
@@ -93,10 +93,10 @@ const createVoice = (
   return { mode: 'tone', osc, gain, panner }
 }
 
-export function useToneEngine(tones: Tone[], masterVolume: number) {
+export function useToneEngine(tones: Tone[]) {
   const engineRef = useRef<Engine>({
     ctx: null,
-    master: null,
+    limiter: null,
     noiseBuffer: null,
     voices: new Map(),
   })
@@ -110,8 +110,8 @@ export function useToneEngine(tones: Tone[], masterVolume: number) {
     engine.ctx = ctx
     if (ctx.state === 'suspended') void ctx.resume()
 
-    let master = engine.master
-    if (master === null) {
+    let out = engine.limiter
+    if (out === null) {
       const limiter = ctx.createDynamicsCompressor()
       limiter.threshold.value = -1
       limiter.knee.value = 0
@@ -119,14 +119,9 @@ export function useToneEngine(tones: Tone[], masterVolume: number) {
       limiter.attack.value = 0.003
       limiter.release.value = 0.1
       limiter.connect(ctx.destination)
-
-      const created = ctx.createGain()
-      created.gain.value = masterVolume
-      created.connect(limiter)
-      engine.master = created
-      master = created
+      engine.limiter = limiter
+      out = limiter
     }
-    master.gain.setTargetAtTime(masterVolume, ctx.currentTime, 0.02)
 
     let noiseBuffer = engine.noiseBuffer
     if (noiseBuffer === null) {
@@ -145,12 +140,12 @@ export function useToneEngine(tones: Tone[], masterVolume: number) {
     for (const tone of active) {
       const existing = engine.voices.get(tone.id)
       if (existing === undefined) {
-        engine.voices.set(tone.id, createVoice(ctx, master, noiseBuffer, tone))
+        engine.voices.set(tone.id, createVoice(ctx, out, noiseBuffer, tone))
         continue
       }
       if (existing.mode !== tone.mode) {
         releaseVoice(existing, ctx)
-        engine.voices.set(tone.id, createVoice(ctx, master, noiseBuffer, tone))
+        engine.voices.set(tone.id, createVoice(ctx, out, noiseBuffer, tone))
         continue
       }
       existing.gain.gain.setTargetAtTime(tone.volume, ctx.currentTime, 0.02)
@@ -168,7 +163,7 @@ export function useToneEngine(tones: Tone[], masterVolume: number) {
         existing.level.gain.setTargetAtTime(k, ctx.currentTime, 0.02)
       }
     }
-  }, [tones, masterVolume])
+  }, [tones])
 
   useEffect(() => {
     const engine = engineRef.current
@@ -187,8 +182,8 @@ export function useToneEngine(tones: Tone[], masterVolume: number) {
         voice.panner.disconnect()
       }
       engine.voices.clear()
-      engine.master?.disconnect()
-      engine.master = null
+      engine.limiter?.disconnect()
+      engine.limiter = null
       engine.noiseBuffer = null
       void engine.ctx?.close()
       engine.ctx = null

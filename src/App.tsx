@@ -5,7 +5,6 @@ import { OCTAVE_DEFAULT, WAVES, snapOctaves } from './types'
 import { useToneEngine } from './useToneEngine'
 
 const STORAGE_KEY = 'tinnitus-settings'
-const MASTER_DEFAULT = 0.8
 const DEFAULT_FREQS = [4000, 8000]
 
 let nextId = 1
@@ -24,7 +23,6 @@ const defaultTones = () => DEFAULT_FREQS.map((f) => createTone(f))
 
 interface SavedState {
   tones: Tone[]
-  master: number
 }
 
 const isValidTone = (t: unknown): t is Tone => {
@@ -56,9 +54,6 @@ const loadState = (): SavedState | null => {
         octaves: Number.isFinite(t.octaves) ? snapOctaves(t.octaves) : OCTAVE_DEFAULT,
         playing: false,
       })),
-      master: Number.isFinite(data.master)
-        ? Math.min(1, Math.max(0, data.master as number))
-        : MASTER_DEFAULT,
     }
   } catch {
     return null
@@ -86,20 +81,18 @@ const clearState = () => {
 export default function App() {
   const [saved] = useState(loadState)
   const [tones, setTones] = useState<Tone[]>(() => saved?.tones ?? defaultTones())
-  const [master, setMaster] = useState(() => saved?.master ?? MASTER_DEFAULT)
 
-  useToneEngine(tones, master)
+  useToneEngine(tones)
 
   useEffect(() => {
-    saveState({ tones, master })
-  }, [tones, master])
+    saveState({ tones })
+  }, [tones])
 
   const anyPlaying = tones.some((t) => t.playing)
 
   const reset = () => {
     clearState()
     setTones(defaultTones())
-    setMaster(MASTER_DEFAULT)
   }
 
   const update = (id: number, patch: Partial<Tone>) =>
@@ -144,23 +137,6 @@ export default function App() {
             >
               + 添加音调
             </button>
-            <div className="flex min-w-40 flex-1 items-center gap-3">
-              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 fill-current text-zinc-500">
-                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-              </svg>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={Math.round(master * 100)}
-                onChange={(e) => setMaster(Number(e.target.value) / 100)}
-                className="flex-1"
-                aria-label="主音量"
-              />
-              <span className="w-10 text-right text-sm tabular-nums text-zinc-400">
-                {Math.round(master * 100)}%
-              </span>
-            </div>
             <button
               type="button"
               onClick={reset}
@@ -169,7 +145,6 @@ export default function App() {
               重置
             </button>
           </div>
-          <div className="mt-2 text-xs text-zinc-600">主音量（总输出）</div>
         </div>
 
         <div className="mt-4 space-y-4">
