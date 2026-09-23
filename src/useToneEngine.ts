@@ -26,14 +26,15 @@ export function useToneEngine(tones: Tone[], masterVolume: number) {
 
     if (engine.master === null) {
       const limiter = ctx.createDynamicsCompressor()
-      limiter.threshold.value = -6
-      limiter.knee.value = 6
-      limiter.ratio.value = 12
+      limiter.threshold.value = -1
+      limiter.knee.value = 0
+      limiter.ratio.value = 20
       limiter.attack.value = 0.003
-      limiter.release.value = 0.25
+      limiter.release.value = 0.1
       limiter.connect(ctx.destination)
 
       const master = ctx.createGain()
+      master.gain.value = masterVolume
       master.connect(limiter)
       engine.master = master
     }
@@ -49,24 +50,28 @@ export function useToneEngine(tones: Tone[], masterVolume: number) {
     }
 
     for (const tone of active) {
-      let voice = engine.voices.get(tone.id)
-      if (voice === undefined) {
+      const existing = engine.voices.get(tone.id)
+      if (existing === undefined) {
         const osc = ctx.createOscillator()
+        osc.type = tone.wave
+        osc.frequency.value = tone.freq
         const gain = ctx.createGain()
-        gain.gain.value = 0
         osc.connect(gain)
         gain.connect(engine.master)
         osc.onended = () => {
           osc.disconnect()
           gain.disconnect()
         }
-        osc.start()
-        voice = { osc, gain }
-        engine.voices.set(tone.id, voice)
+        const t = ctx.currentTime
+        gain.gain.setValueAtTime(0, t)
+        gain.gain.linearRampToValueAtTime(tone.volume, t + 0.03)
+        osc.start(t)
+        engine.voices.set(tone.id, { osc, gain })
+      } else {
+        existing.osc.type = tone.wave
+        existing.osc.frequency.setTargetAtTime(tone.freq, ctx.currentTime, 0.015)
+        existing.gain.gain.setTargetAtTime(tone.volume, ctx.currentTime, 0.02)
       }
-      voice.osc.type = tone.wave
-      voice.osc.frequency.setTargetAtTime(tone.freq, ctx.currentTime, 0.015)
-      voice.gain.gain.setTargetAtTime(tone.volume, ctx.currentTime, 0.02)
     }
   }, [tones, masterVolume])
 
