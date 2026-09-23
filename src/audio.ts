@@ -5,7 +5,7 @@ export const bandWidthHz = (freq: number, n: number) => freq * octaveSpread(n)
 export const octaveQ = (n: number) => Math.sqrt(Math.SQRT2 - 1) / octaveSpread(n)
 
 export const noiseCompensation = (sampleRate: number, freq: number, n: number) =>
-  Math.min(12, Math.sqrt((1.5 * sampleRate) / 2 / bandWidthHz(freq, n)))
+  Math.min(20, Math.sqrt((1.5 * sampleRate) / 2 / bandWidthHz(freq, n)))
 
 export const makeNoiseBuffer = (ctx: AudioContext): AudioBuffer => {
   const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate)

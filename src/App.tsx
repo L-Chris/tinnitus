@@ -54,7 +54,7 @@ const loadState = (): SavedState | null => {
         pan: Math.min(1, Math.max(-1, t.pan)),
         mode: t.mode === 'noise' ? 'noise' : 'tone',
         octaves: Number.isFinite(t.octaves)
-          ? Math.min(OCTAVE_MAX, Math.max(OCTAVE_MIN, t.octaves))
+          ? Math.min(OCTAVE_MAX, Math.max(OCTAVE_MIN, Math.round(t.octaves * 10000) / 10000))
           : OCTAVE_DEFAULT,
         playing: false,
       })),
