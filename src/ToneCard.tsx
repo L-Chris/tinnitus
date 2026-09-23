@@ -1,6 +1,14 @@
 import { useState } from 'react'
+import { bandWidthHz } from './audio'
 import type { Tone } from './types'
-import { PAN_OPTIONS, WAVES, WAVE_LABELS } from './types'
+import {
+  MODE_OPTIONS,
+  OCTAVE_MAX,
+  OCTAVE_MIN,
+  PAN_OPTIONS,
+  WAVES,
+  WAVE_LABELS,
+} from './types'
 
 const F_MIN = 20
 const F_MAX = 20000
@@ -9,6 +17,10 @@ const LOG_RANGE = Math.log(F_MAX / F_MIN)
 const clampFreq = (f: number) => Math.min(F_MAX, Math.max(F_MIN, Math.round(f)))
 const toSlider = (f: number) => Math.round((1000 * Math.log(f / F_MIN)) / LOG_RANGE)
 const fromSlider = (v: number) => F_MIN * Math.exp((LOG_RANGE * v) / 1000)
+const clampOctaves = (n: number) =>
+  Math.min(OCTAVE_MAX, Math.max(OCTAVE_MIN, Math.round(n * 100) / 100))
+const formatHz = (hz: number) =>
+  hz >= 1000 ? `${(hz / 1000).toFixed(1)} kHz` : `${Math.round(hz)} Hz`
 
 interface ToneCardProps {
   tone: Tone
@@ -19,10 +31,17 @@ interface ToneCardProps {
 export default function ToneCard({ tone, onChange, onRemove }: ToneCardProps) {
   const [freqText, setFreqText] = useState(String(tone.freq))
   const [lastFreq, setLastFreq] = useState(tone.freq)
+  const [octText, setOctText] = useState(String(tone.octaves))
+  const [lastOct, setLastOct] = useState(tone.octaves)
 
   if (tone.freq !== lastFreq) {
     setLastFreq(tone.freq)
     setFreqText(String(tone.freq))
+  }
+
+  if (tone.octaves !== lastOct) {
+    setLastOct(tone.octaves)
+    setOctText(String(tone.octaves))
   }
 
   const commitFreq = () => {
@@ -33,6 +52,17 @@ export default function ToneCard({ tone, onChange, onRemove }: ToneCardProps) {
       setFreqText(String(f))
     } else {
       setFreqText(String(tone.freq))
+    }
+  }
+
+  const commitOctaves = () => {
+    const n = Number(octText)
+    if (Number.isFinite(n) && n > 0) {
+      const v = clampOctaves(n)
+      onChange({ octaves: v })
+      setOctText(String(v))
+    } else {
+      setOctText(String(tone.octaves))
     }
   }
 
@@ -73,7 +103,10 @@ export default function ToneCard({ tone, onChange, onRemove }: ToneCardProps) {
             <span className="ml-1 text-base font-normal text-zinc-400">Hz</span>
           </div>
           <div className="text-xs text-zinc-500">
-            {WAVE_LABELS[tone.wave]}波 · 音量 {volumePct}%
+            {tone.mode === 'noise'
+              ? `窄带噪声 ${tone.octaves} oct`
+              : `${WAVE_LABELS[tone.wave]}波`}{' '}
+            · 音量 {volumePct}%
             {tone.pan !== 0 && ` · 仅${tone.pan < 0 ? '左' : '右'}耳`}
           </div>
         </div>
@@ -151,6 +184,22 @@ export default function ToneCard({ tone, onChange, onRemove }: ToneCardProps) {
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex overflow-hidden rounded-lg border border-zinc-700">
+            {MODE_OPTIONS.map((m) => (
+              <button
+                key={m.value}
+                type="button"
+                onClick={() => onChange({ mode: m.value })}
+                className={`px-2.5 py-1 text-xs transition-colors ${
+                  tone.mode === m.value
+                    ? 'bg-cyan-500/20 text-cyan-300'
+                    : 'bg-zinc-800/50 text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex overflow-hidden rounded-lg border border-zinc-700">
             {PAN_OPTIONS.map((p) => (
               <button
                 key={p.value}
@@ -166,24 +215,60 @@ export default function ToneCard({ tone, onChange, onRemove }: ToneCardProps) {
               </button>
             ))}
           </div>
-          <div className="flex overflow-hidden rounded-lg border border-zinc-700">
-            {WAVES.map((w) => (
-              <button
-                key={w}
-                type="button"
-                onClick={() => onChange({ wave: w })}
-                className={`px-2.5 py-1 text-xs transition-colors ${
-                  tone.wave === w
-                    ? 'bg-cyan-500/20 text-cyan-300'
-                    : 'bg-zinc-800/50 text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                {WAVE_LABELS[w]}
-              </button>
-            ))}
-          </div>
+          {tone.mode === 'tone' && (
+            <div className="flex overflow-hidden rounded-lg border border-zinc-700">
+              {WAVES.map((w) => (
+                <button
+                  key={w}
+                  type="button"
+                  onClick={() => onChange({ wave: w })}
+                  className={`px-2.5 py-1 text-xs transition-colors ${
+                    tone.wave === w
+                      ? 'bg-cyan-500/20 text-cyan-300'
+                      : 'bg-zinc-800/50 text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  {WAVE_LABELS[w]}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
+
+      {tone.mode === 'noise' && (
+        <div className="mt-3 flex items-center gap-3">
+          <span className="shrink-0 text-xs text-zinc-500">带宽</span>
+          <input
+            type="range"
+            min={OCTAVE_MIN}
+            max={OCTAVE_MAX}
+            step={0.05}
+            value={tone.octaves}
+            onChange={(e) => onChange({ octaves: Number(e.target.value) })}
+            className="min-w-24 flex-1"
+            aria-label="带宽（octave）"
+          />
+          <input
+            type="number"
+            min={OCTAVE_MIN}
+            max={OCTAVE_MAX}
+            step={0.1}
+            value={octText}
+            onChange={(e) => setOctText(e.target.value)}
+            onBlur={commitOctaves}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitOctaves()
+            }}
+            className="w-16 rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1 text-center text-sm tabular-nums text-zinc-100 focus:border-cyan-500 focus:outline-none"
+            aria-label="带宽数值输入（octave）"
+          />
+          <span className="shrink-0 text-xs text-zinc-500">oct</span>
+          <span className="w-16 shrink-0 text-right text-xs tabular-nums text-zinc-400">
+            ≈ {formatHz(bandWidthHz(tone.freq, tone.octaves))}
+          </span>
+        </div>
+      )}
 
       <div className="mt-4 flex items-center gap-3">
         <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 fill-current text-zinc-500">

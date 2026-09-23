@@ -9,11 +9,24 @@ export const WAVE_LABELS: Record<WaveType, string> = {
   triangle: '三角',
 }
 
+export type ToneMode = 'tone' | 'noise'
+
+export const MODE_OPTIONS = [
+  { value: 'tone', label: '纯音' },
+  { value: 'noise', label: '噪声' },
+] as const
+
+export const OCTAVE_MIN = 0.1
+export const OCTAVE_MAX = 3
+export const OCTAVE_DEFAULT = 0.5
+
 export interface Tone {
   id: number
   freq: number
   volume: number
   wave: WaveType
+  mode: ToneMode
+  octaves: number
   pan: number
   playing: boolean
 }
