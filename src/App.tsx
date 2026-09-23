@@ -1,7 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import ToneCard from './ToneCard'
 import type { Tone } from './types'
+import { WAVES } from './types'
 import { useToneEngine } from './useToneEngine'
+
+const STORAGE_KEY = 'tinnitus-settings'
+const MASTER_DEFAULT = 0.8
+const DEFAULT_FREQS = [4000, 8000]
 
 let nextId = 1
 const createTone = (freq: number): Tone => ({
@@ -13,13 +18,85 @@ const createTone = (freq: number): Tone => ({
   playing: false,
 })
 
+const defaultTones = () => DEFAULT_FREQS.map((f) => createTone(f))
+
+interface SavedState {
+  tones: Tone[]
+  master: number
+}
+
+const isValidTone = (t: unknown): t is Tone => {
+  if (typeof t !== 'object' || t === null) return false
+  const tone = t as Partial<Tone>
+  return (
+    Number.isFinite(tone.freq) &&
+    Number.isFinite(tone.volume) &&
+    Number.isFinite(tone.pan) &&
+    typeof tone.wave === 'string' &&
+    (WAVES as readonly string[]).includes(tone.wave)
+  )
+}
+
+const loadState = (): SavedState | null => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw === null) return null
+    const data = JSON.parse(raw) as Partial<SavedState>
+    if (!Array.isArray(data.tones) || !data.tones.every(isValidTone)) return null
+    return {
+      tones: data.tones.map((t) => ({
+        ...t,
+        id: nextId++,
+        freq: Math.min(20000, Math.max(20, Math.round(t.freq))),
+        volume: Math.min(1, Math.max(0, t.volume)),
+        pan: Math.min(1, Math.max(-1, t.pan)),
+        playing: false,
+      })),
+      master: Number.isFinite(data.master)
+        ? Math.min(1, Math.max(0, data.master as number))
+        : MASTER_DEFAULT,
+    }
+  } catch {
+    return null
+  }
+}
+
+const saveState = (state: SavedState) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    return true
+  } catch {
+    return false
+  }
+}
+
+const clearState = () => {
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+    return true
+  } catch {
+    return false
+  }
+}
+
 export default function App() {
-  const [tones, setTones] = useState<Tone[]>([createTone(4000), createTone(8000)])
-  const [master, setMaster] = useState(0.8)
+  const [saved] = useState(loadState)
+  const [tones, setTones] = useState<Tone[]>(() => saved?.tones ?? defaultTones())
+  const [master, setMaster] = useState(() => saved?.master ?? MASTER_DEFAULT)
 
   useToneEngine(tones, master)
 
+  useEffect(() => {
+    saveState({ tones, master })
+  }, [tones, master])
+
   const anyPlaying = tones.some((t) => t.playing)
+
+  const reset = () => {
+    clearState()
+    setTones(defaultTones())
+    setMaster(MASTER_DEFAULT)
+  }
 
   const update = (id: number, patch: Partial<Tone>) =>
     setTones((ts) => ts.map((t) => (t.id === id ? { ...t, ...patch } : t)))
@@ -80,6 +157,13 @@ export default function App() {
                 {Math.round(master * 100)}%
               </span>
             </div>
+            <button
+              type="button"
+              onClick={reset}
+              className="rounded-xl border border-zinc-700 bg-zinc-800/60 px-4 py-2 text-sm text-zinc-300 transition-colors hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400"
+            >
+              重置
+            </button>
           </div>
           <div className="mt-2 text-xs text-zinc-600">主音量（总输出）</div>
         </div>
