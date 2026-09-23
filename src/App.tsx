@@ -36,11 +36,6 @@ export default function App() {
       <main className="mx-auto max-w-2xl px-4 pb-16 pt-10">
         <header className="text-center">
           <h1 className="text-3xl font-bold tracking-tight text-zinc-50">耳鸣频率测试</h1>
-          <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-            播放纯音并调节频率与音量，找到与你的耳鸣声最接近的音调。
-            <br />
-            支持多个音调同时播放，每个音调的频率与音量独立控制。
-          </p>
         </header>
 
         <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-200/90">
