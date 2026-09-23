@@ -9,6 +9,7 @@ const createTone = (freq: number): Tone => ({
   freq,
   volume: 0.3,
   wave: 'sine',
+  pan: 0,
   playing: false,
 })
 

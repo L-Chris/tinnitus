@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Tone } from './types'
-import { WAVES, WAVE_LABELS } from './types'
+import { PAN_OPTIONS, WAVES, WAVE_LABELS } from './types'
 
 const F_MIN = 20
 const F_MAX = 20000
@@ -74,6 +74,7 @@ export default function ToneCard({ tone, onChange, onRemove }: ToneCardProps) {
           </div>
           <div className="text-xs text-zinc-500">
             {WAVE_LABELS[tone.wave]}波 · 音量 {volumePct}%
+            {tone.pan !== 0 && ` · 仅${tone.pan < 0 ? '左' : '右'}耳`}
           </div>
         </div>
 
@@ -148,21 +149,39 @@ export default function ToneCard({ tone, onChange, onRemove }: ToneCardProps) {
           ))}
         </div>
 
-        <div className="flex overflow-hidden rounded-lg border border-zinc-700">
-          {WAVES.map((w) => (
-            <button
-              key={w}
-              type="button"
-              onClick={() => onChange({ wave: w })}
-              className={`px-2.5 py-1 text-xs transition-colors ${
-                tone.wave === w
-                  ? 'bg-cyan-500/20 text-cyan-300'
-                  : 'bg-zinc-800/50 text-zinc-400 hover:text-zinc-200'
-              }`}
-            >
-              {WAVE_LABELS[w]}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex overflow-hidden rounded-lg border border-zinc-700">
+            {PAN_OPTIONS.map((p) => (
+              <button
+                key={p.value}
+                type="button"
+                onClick={() => onChange({ pan: p.value })}
+                className={`px-2.5 py-1 text-xs transition-colors ${
+                  tone.pan === p.value
+                    ? 'bg-cyan-500/20 text-cyan-300'
+                    : 'bg-zinc-800/50 text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex overflow-hidden rounded-lg border border-zinc-700">
+            {WAVES.map((w) => (
+              <button
+                key={w}
+                type="button"
+                onClick={() => onChange({ wave: w })}
+                className={`px-2.5 py-1 text-xs transition-colors ${
+                  tone.wave === w
+                    ? 'bg-cyan-500/20 text-cyan-300'
+                    : 'bg-zinc-800/50 text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                {WAVE_LABELS[w]}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

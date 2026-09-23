@@ -14,5 +14,12 @@ export interface Tone {
   freq: number
   volume: number
   wave: WaveType
+  pan: number
   playing: boolean
 }
+
+export const PAN_OPTIONS = [
+  { value: -1, label: '左耳' },
+  { value: 0, label: '双耳' },
+  { value: 1, label: '右耳' },
+] as const

@@ -4,6 +4,7 @@ import type { Tone } from './types'
 interface Voice {
   osc: OscillatorNode
   gain: GainNode
+  panner: StereoPannerNode
 }
 
 interface Engine {
@@ -56,21 +57,26 @@ export function useToneEngine(tones: Tone[], masterVolume: number) {
         osc.type = tone.wave
         osc.frequency.value = tone.freq
         const gain = ctx.createGain()
+        const panner = ctx.createStereoPanner()
+        panner.pan.value = tone.pan
         osc.connect(gain)
-        gain.connect(engine.master)
+        gain.connect(panner)
+        panner.connect(engine.master)
         osc.onended = () => {
           osc.disconnect()
           gain.disconnect()
+          panner.disconnect()
         }
         const t = ctx.currentTime
         gain.gain.setValueAtTime(0, t)
         gain.gain.linearRampToValueAtTime(tone.volume, t + 0.03)
         osc.start(t)
-        engine.voices.set(tone.id, { osc, gain })
+        engine.voices.set(tone.id, { osc, gain, panner })
       } else {
         existing.osc.type = tone.wave
         existing.osc.frequency.setTargetAtTime(tone.freq, ctx.currentTime, 0.015)
         existing.gain.gain.setTargetAtTime(tone.volume, ctx.currentTime, 0.02)
+        existing.panner.pan.setTargetAtTime(tone.pan, ctx.currentTime, 0.02)
       }
     }
   }, [tones, masterVolume])
@@ -83,6 +89,7 @@ export function useToneEngine(tones: Tone[], masterVolume: number) {
         voice.osc.stop()
         voice.osc.disconnect()
         voice.gain.disconnect()
+        voice.panner.disconnect()
       }
       engine.voices.clear()
       engine.master?.disconnect()
