@@ -32,6 +32,9 @@ const isValidTone = (t: unknown): t is Tone => {
     Number.isFinite(tone.freq) &&
     Number.isFinite(tone.volume) &&
     Number.isFinite(tone.pan) &&
+    Number.isFinite(tone.octaves) &&
+    (tone.octaves as number) > 0 &&
+    (tone.mode === 'tone' || tone.mode === 'noise') &&
     typeof tone.wave === 'string' &&
     (WAVES as readonly string[]).includes(tone.wave)
   )
@@ -50,8 +53,7 @@ const loadState = (): SavedState | null => {
         freq: Math.min(20000, Math.max(20, Math.round(t.freq))),
         volume: Math.min(1, Math.max(0, t.volume)),
         pan: Math.min(1, Math.max(-1, t.pan)),
-        mode: t.mode === 'noise' ? 'noise' : 'tone',
-        octaves: Number.isFinite(t.octaves) ? snapOctaves(t.octaves) : OCTAVE_DEFAULT,
+        octaves: snapOctaves(t.octaves),
         playing: false,
       })),
     }
