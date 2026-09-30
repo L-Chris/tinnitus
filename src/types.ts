@@ -2,19 +2,11 @@ export const WAVES = ['sine', 'square', 'sawtooth', 'triangle'] as const
 
 export type WaveType = (typeof WAVES)[number]
 
-export const WAVE_LABELS: Record<WaveType, string> = {
-  sine: '正弦',
-  square: '方波',
-  sawtooth: '锯齿',
-  triangle: '三角',
-}
-
 export type ToneMode = 'tone' | 'noise'
 
-export const MODE_OPTIONS = [
-  { value: 'tone', label: '纯音' },
-  { value: 'noise', label: '噪声' },
-] as const
+export const MODE_VALUES = ['tone', 'noise'] as const
+
+export const PAN_VALUES = [-1, 0, 1] as const
 
 export const OCTAVE_OPTIONS = [
   { value: 1 / 24, label: '1/24' },
@@ -48,9 +40,3 @@ export interface Tone {
   pan: number
   playing: boolean
 }
-
-export const PAN_OPTIONS = [
-  { value: -1, label: '左耳' },
-  { value: 0, label: '双耳' },
-  { value: 1, label: '右耳' },
-] as const

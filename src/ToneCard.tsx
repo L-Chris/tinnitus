@@ -1,14 +1,14 @@
 import { useState } from 'react'
+import type { Strings } from './i18n'
 import { bandWidthHz } from './audio'
 import type { Tone } from './types'
 import {
-  MODE_OPTIONS,
+  MODE_VALUES,
   OCTAVE_MAX,
   OCTAVE_MIN,
   OCTAVE_OPTIONS,
-  PAN_OPTIONS,
+  PAN_VALUES,
   WAVES,
-  WAVE_LABELS,
   octaveLabel,
   snapOctaves,
 } from './types'
@@ -27,11 +27,12 @@ const formatHz = (hz: number) =>
 
 interface ToneCardProps {
   tone: Tone
+  t: Strings
   onChange: (patch: Partial<Tone>) => void
   onRemove: () => void
 }
 
-export default function ToneCard({ tone, onChange, onRemove }: ToneCardProps) {
+export default function ToneCard({ tone, t, onChange, onRemove }: ToneCardProps) {
   const [freqText, setFreqText] = useState(String(tone.freq))
   const [lastFreq, setLastFreq] = useState(tone.freq)
   const [octText, setOctText] = useState(fmtOct(tone.octaves))
@@ -82,7 +83,7 @@ export default function ToneCard({ tone, onChange, onRemove }: ToneCardProps) {
         <button
           type="button"
           onClick={() => onChange({ playing: !tone.playing })}
-          aria-label={tone.playing ? '停止' : '播放'}
+          aria-label={tone.playing ? t.stop : t.play}
           className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-colors ${
             tone.playing
               ? 'bg-cyan-400 text-zinc-950 hover:bg-cyan-300'
@@ -107,17 +108,17 @@ export default function ToneCard({ tone, onChange, onRemove }: ToneCardProps) {
           </div>
           <div className="text-xs text-zinc-500">
             {tone.mode === 'noise'
-              ? `窄带噪声 ${octaveLabel(tone.octaves)} oct`
-              : `${WAVE_LABELS[tone.wave]}波`}{' '}
-            · 音量 {volumePct}%
-            {tone.pan !== 0 && ` · 仅${tone.pan < 0 ? '左' : '右'}耳`}
+              ? `${t.noiseInfo} ${octaveLabel(tone.octaves)} oct`
+              : t.waves[tone.wave]}{' '}
+            · {t.volumeWord} {volumePct}%
+            {tone.pan !== 0 && ` · ${tone.pan < 0 ? t.leftOnly : t.rightOnly}`}
           </div>
         </div>
 
         <button
           type="button"
           onClick={onRemove}
-          aria-label="删除音调"
+          aria-label={t.removeTone}
           className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-800 hover:text-red-400"
         >
           <svg
@@ -139,7 +140,7 @@ export default function ToneCard({ tone, onChange, onRemove }: ToneCardProps) {
           value={toSlider(tone.freq)}
           onChange={(e) => onChange({ freq: snapFreq10(fromSlider(Number(e.target.value))) })}
           className="w-full"
-          aria-label="频率"
+          aria-label={t.freq}
         />
         <div className="mt-1 flex justify-between text-[10px] text-zinc-600">
           <span>20 Hz</span>
@@ -170,7 +171,7 @@ export default function ToneCard({ tone, onChange, onRemove }: ToneCardProps) {
               if (e.key === 'Enter') commitFreq()
             }}
             className="w-20 rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1 text-center text-sm tabular-nums text-zinc-100 focus:border-cyan-500 focus:outline-none"
-            aria-label="频率数值输入"
+            aria-label={t.freqInput}
           />
           <span className="text-xs text-zinc-500">Hz</span>
           {[1, 10].map((d) => (
@@ -187,34 +188,34 @@ export default function ToneCard({ tone, onChange, onRemove }: ToneCardProps) {
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex overflow-hidden rounded-lg border border-zinc-700">
-            {MODE_OPTIONS.map((m) => (
+            {MODE_VALUES.map((m) => (
               <button
-                key={m.value}
+                key={m}
                 type="button"
-                onClick={() => onChange({ mode: m.value })}
+                onClick={() => onChange({ mode: m })}
                 className={`px-2.5 py-1 text-xs transition-colors ${
-                  tone.mode === m.value
+                  tone.mode === m
                     ? 'bg-cyan-500/20 text-cyan-300'
                     : 'bg-zinc-800/50 text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                {m.label}
+                {t.modes[m]}
               </button>
             ))}
           </div>
           <div className="flex overflow-hidden rounded-lg border border-zinc-700">
-            {PAN_OPTIONS.map((p) => (
+            {PAN_VALUES.map((p) => (
               <button
-                key={p.value}
+                key={p}
                 type="button"
-                onClick={() => onChange({ pan: p.value })}
+                onClick={() => onChange({ pan: p })}
                 className={`px-2.5 py-1 text-xs transition-colors ${
-                  tone.pan === p.value
+                  tone.pan === p
                     ? 'bg-cyan-500/20 text-cyan-300'
                     : 'bg-zinc-800/50 text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                {p.label}
+                {t.pans[p]}
               </button>
             ))}
           </div>
@@ -231,7 +232,7 @@ export default function ToneCard({ tone, onChange, onRemove }: ToneCardProps) {
                       : 'bg-zinc-800/50 text-zinc-400 hover:text-zinc-200'
                   }`}
                 >
-                  {WAVE_LABELS[w]}
+                  {t.waves[w]}
                 </button>
               ))}
             </div>
@@ -241,7 +242,7 @@ export default function ToneCard({ tone, onChange, onRemove }: ToneCardProps) {
 
       {tone.mode === 'noise' && (
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-          <span className="shrink-0 text-xs text-zinc-500">带宽</span>
+          <span className="shrink-0 text-xs text-zinc-500">{t.bandwidth}</span>
           <div className="flex overflow-hidden rounded-lg border border-zinc-700">
             {OCTAVE_OPTIONS.map((o) => (
               <button
@@ -271,7 +272,7 @@ export default function ToneCard({ tone, onChange, onRemove }: ToneCardProps) {
                 if (e.key === 'Enter') commitOctaves()
               }}
               className="w-16 rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1 text-center text-sm tabular-nums text-zinc-100 focus:border-cyan-500 focus:outline-none"
-              aria-label="自定义带宽（octave）"
+              aria-label={t.bandwidthInput}
             />
             <span className="shrink-0 text-xs text-zinc-500">oct</span>
           </div>
@@ -292,7 +293,7 @@ export default function ToneCard({ tone, onChange, onRemove }: ToneCardProps) {
           value={volumePct}
           onChange={(e) => onChange({ volume: Number(e.target.value) / 100 })}
           className="flex-1"
-          aria-label="音量"
+          aria-label={t.volume}
         />
         <span className="w-10 text-right text-sm tabular-nums text-zinc-400">{volumePct}%</span>
       </div>

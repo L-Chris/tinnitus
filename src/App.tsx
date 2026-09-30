@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
+import type { LangPref } from './i18n'
+import { STRINGS, detectLang } from './i18n'
 import ToneCard from './ToneCard'
 import type { Tone } from './types'
 import { OCTAVE_DEFAULT, WAVES, snapOctaves } from './types'
@@ -23,7 +25,10 @@ const defaultTones = () => DEFAULT_FREQS.map((f) => createTone(f))
 
 interface SavedState {
   tones: Tone[]
+  lang: LangPref
 }
+
+const LANG_PREFS: readonly LangPref[] = ['auto', 'zh', 'en']
 
 const isValidTone = (t: unknown): t is Tone => {
   if (typeof t !== 'object' || t === null) return false
@@ -56,6 +61,7 @@ const loadState = (): SavedState | null => {
         octaves: snapOctaves(t.octaves),
         playing: false,
       })),
+      lang: LANG_PREFS.includes(data.lang as LangPref) ? (data.lang as LangPref) : 'auto',
     }
   } catch {
     return null
@@ -82,40 +88,77 @@ const clearState = () => {
 
 export default function App() {
   const [saved] = useState(loadState)
+  const [detected] = useState(detectLang)
   const [tones, setTones] = useState<Tone[]>(() => saved?.tones ?? defaultTones())
+  const [langPref, setLangPref] = useState<LangPref>(() => saved?.lang ?? 'auto')
+
+  const lang = langPref === 'auto' ? detected : langPref
+  const t = STRINGS[lang]
 
   useToneEngine(tones)
 
   useEffect(() => {
-    saveState({ tones })
-  }, [tones])
+    saveState({ tones, lang: langPref })
+  }, [tones, langPref])
 
-  const anyPlaying = tones.some((t) => t.playing)
+  useEffect(() => {
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en'
+    document.title = t.title
+  }, [lang, t.title])
+
+  const anyPlaying = tones.some((tn) => tn.playing)
 
   const reset = () => {
     clearState()
     setTones(defaultTones())
+    setLangPref('auto')
   }
 
   const update = (id: number, patch: Partial<Tone>) =>
-    setTones((ts) => ts.map((t) => (t.id === id ? { ...t, ...patch } : t)))
+    setTones((ts) => ts.map((tn) => (tn.id === id ? { ...tn, ...patch } : tn)))
 
-  const remove = (id: number) => setTones((ts) => ts.filter((t) => t.id !== id))
+  const remove = (id: number) => setTones((ts) => ts.filter((tn) => tn.id !== id))
 
   const addTone = () =>
     setTones((ts) => [...ts, createTone(ts.length > 0 ? ts[ts.length - 1].freq : 4000)])
 
-  const toggleAll = () => setTones((ts) => ts.map((t) => ({ ...t, playing: !anyPlaying })))
+  const toggleAll = () => setTones((ts) => ts.map((tn) => ({ ...tn, playing: !anyPlaying })))
+
+  const langOptions = [
+    { value: 'auto', label: t.auto },
+    { value: 'zh', label: '中文' },
+    { value: 'en', label: 'English' },
+  ] as const
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <main className="mx-auto max-w-2xl px-4 pb-16 pt-10">
-        <header className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-50">耳鸣频率测试</h1>
+      <main className="mx-auto max-w-2xl px-4 pb-16 pt-6">
+        <div className="flex items-center justify-end gap-2">
+          <span className="text-xs text-zinc-600">{t.langLabel}</span>
+          <div className="flex overflow-hidden rounded-lg border border-zinc-700">
+            {langOptions.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => setLangPref(o.value)}
+                className={`px-2.5 py-1 text-xs transition-colors ${
+                  langPref === o.value
+                    ? 'bg-cyan-500/20 text-cyan-300'
+                    : 'bg-zinc-800/50 text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <header className="mt-4 text-center">
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-50">{t.title}</h1>
         </header>
 
         <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-200/90">
-          安全提示：请以较小音量开始测试，避免长时间大音量播放，以免对听力造成损伤。如感不适请立即停止。
+          {t.safety}
         </div>
 
         <div className="mt-5 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
@@ -130,21 +173,21 @@ export default function App() {
                   : 'bg-cyan-500 text-zinc-950 hover:bg-cyan-400'
               }`}
             >
-              {anyPlaying ? '全部停止' : '全部播放'}
+              {anyPlaying ? t.stopAll : t.playAll}
             </button>
             <button
               type="button"
               onClick={addTone}
               className="rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-4 py-2 text-sm font-medium text-cyan-300 transition-colors hover:bg-cyan-500/20"
             >
-              + 添加音调
+              {t.addTone}
             </button>
             <button
               type="button"
               onClick={reset}
               className="rounded-xl border border-zinc-700 bg-zinc-800/60 px-4 py-2 text-sm text-zinc-300 transition-colors hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400"
             >
-              重置
+              {t.reset}
             </button>
           </div>
         </div>
@@ -152,13 +195,14 @@ export default function App() {
         <div className="mt-4 space-y-4">
           {tones.length === 0 && (
             <div className="rounded-2xl border border-dashed border-zinc-800 py-10 text-center text-sm text-zinc-500">
-              暂无音调，点击「+ 添加音调」开始测试
+              {t.empty}
             </div>
           )}
           {tones.map((tone) => (
             <ToneCard
               key={tone.id}
               tone={tone}
+              t={t}
               onChange={(patch) => update(tone.id, patch)}
               onRemove={() => remove(tone.id)}
             />
@@ -166,9 +210,9 @@ export default function App() {
         </div>
 
         <footer className="mt-10 text-center text-xs leading-relaxed text-zinc-600">
-          测试建议：佩戴耳机，在安静环境中进行；先调低音量，再逐步上调至与耳鸣响度相当。
+          {t.footerAdvice}
           <br />
-          本工具仅供辅助参考，不能替代专业医疗诊断。
+          {t.footerDisclaimer}
         </footer>
       </main>
     </div>
